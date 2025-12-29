@@ -18,6 +18,9 @@ public class EventDTO {
 
     private Long id;
 
+    @NotNull(message = "userId cannot be null")
+    private Long userId;
+
     @NotBlank(message = "Title cannot be blank")
     @Size(max = 100, message = "Title must be at most 100 characters")
     private String title;

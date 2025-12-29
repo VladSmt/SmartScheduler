@@ -12,6 +12,7 @@ public class EventMapper {
 
         return EventDTO.builder()
                 .id(event.getId())
+                .userId(event.getUserId())
                 .title(event.getTitle())
                 .description(event.getDescription())
                 .eventDate(event.getEventDate())
@@ -23,6 +24,7 @@ public class EventMapper {
 
         return Event.builder()
                 .id(eventDTO.getId())
+                .userId(eventDTO.getUserId())
                 .title(eventDTO.getTitle())
                 .description(eventDTO.getDescription())
                 .eventDate(eventDTO.getEventDate())

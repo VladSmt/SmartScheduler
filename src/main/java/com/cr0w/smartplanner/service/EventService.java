@@ -8,9 +8,12 @@ import com.cr0w.smartplanner.exception.EventNotUpdatedException;
 import com.cr0w.smartplanner.mapper.EventMapper;
 import com.cr0w.smartplanner.model.Event;
 import com.cr0w.smartplanner.repository.EventRepository;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,36 +30,31 @@ public class EventService {
      * @return the created event as EventDTO
      * @throws EventNotCreatedException if the event could not be created
      */
-    public EventDTO createEvent(EventDTO eventDTO){
+    public EventDTO createEvent(@Valid EventDTO eventDTO){
+
+        logger.info("Starting event creation with title: '{}'", eventDTO.getTitle());
+        logger.debug("Event details - description: '{}', date: {}", eventDTO.getDescription(), eventDTO.getEventDate());
+
+        Event event = Event.builder()
+                .userId(eventDTO.getUserId())
+                .title(eventDTO.getTitle())
+                .description(eventDTO.getDescription())
+                .eventDate(eventDTO.getEventDate())
+                .build();
+
         try {
-            logger.info("Starting event creation with title: '{}'", eventDTO.getTitle());
-            logger.debug("Event details - description: '{}', date: {}", eventDTO.getDescription(), eventDTO.getEventDate());
-
-            if (eventDTO.getTitle() == null || eventDTO.getTitle().trim().isEmpty()) {
-                logger.warn("Event creation validation failed: title is null or empty");
-                throw new EventNotCreatedException("Event title cannot be null or empty");
-            }
-
-            Event event = Event.builder()
-                    .title(eventDTO.getTitle())
-                    .description(eventDTO.getDescription())
-                    .eventDate(eventDTO.getEventDate())
-                    .build();
-
             Event saved = repository.save(event);
-            if (saved.getId() == null) {
-                logger.error("Event creation failed: generated ID is null");
-                throw new EventNotCreatedException("Failed to create event: ID was not generated");
-            }
-
             logger.info("Event created successfully with ID: {}", saved.getId());
             return mapper.eventToEventDTO(saved);
-        } catch (EventNotCreatedException e) {
-            logger.error("EventNotCreatedException occurred: {}", e.getMessage());
-            throw e;
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Failed to create event due to constraint violation", e);
+            throw new EventNotCreatedException("Failed to create event: constraint violation", e);
+        } catch (DataAccessException e) {
+            logger.error("Unexpected DB error while creating event", e);
+            throw new EventNotCreatedException("Failed to create event due to DB error",  e);
         } catch (Exception e) {
-            logger.error("Unexpected error occurred while creating event: {}", e.getMessage(), e);
-            throw new EventNotCreatedException("Failed to create event: " + e.getMessage());
+            logger.error("Unexpected  error while creating event", e);
+            throw new EventNotCreatedException("Failed to delete event: " + e.getMessage(), e);
         }
     }
 
@@ -68,31 +66,33 @@ public class EventService {
      * @throws EventNotDeletedException if the event could not be deleted
      */
     public EventDTO deleteEvent(Long id){
+        logger.info("Attempting to delete event with ID: {}", id);
+
+        if (id == null || id <= 0) {
+            logger.warn("Delete validation failed: invalid event ID: {}", id);
+            throw new EventNotFoundException("Invalid event ID: " + id);
+        }
+
+        Event event = repository.findById(id)
+                .orElseThrow(() -> {
+                    logger.warn("Delete failed: event not found with ID: {}", id);
+                    return new EventNotFoundException("Event with id " + id + " not found");
+                });
         try {
-            logger.info("Attempting to delete event with ID: {}", id);
-
-            if (id == null || id <= 0) {
-                logger.warn("Delete validation failed: invalid event ID: {}", id);
-                throw new EventNotFoundException("Invalid event ID: " + id);
-            }
-
-            Event event = repository.findById(id)
-                    .orElseThrow(() -> {
-                        logger.warn("Delete failed: event not found with ID: {}", id);
-                        return new EventNotFoundException("Event with id " + id + " not found");
-                    });
-
             logger.debug("Found event to delete - ID: {}, title: '{}'", id, event.getTitle());
             repository.deleteById(id);
             logger.info("Event deleted successfully with ID: {}", id);
 
             return mapper.eventToEventDTO(event);
-        } catch (EventNotFoundException e) {
-            logger.error("EventNotFoundException occurred: {}", e.getMessage());
-            throw e;
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Constraint violation while deleting event with ID: {}", id, e);
+            throw new EventNotDeletedException("Failed to delete event: constraint violation", e);
+        } catch (DataAccessException e) {
+            logger.error("Database error while deleting event with ID: {}", id, e);
+            throw new EventNotDeletedException("Failed to delete event due to DB error", e);
         } catch (Exception e) {
-            logger.error("Unexpected error occurred while deleting event with ID: {}: {}", id, e.getMessage(), e);
-            throw new EventNotDeletedException("Failed to delete event: " + e.getMessage());
+            logger.error("Unexpected error occurred while deleting event with ID: {}", id, e);
+            throw new EventNotDeletedException("Failed to delete event: " + e.getMessage(), e);
         }
     }
 
@@ -105,27 +105,27 @@ public class EventService {
      * @throws EventNotUpdatedException if the event could not be updated
      */
     public EventDTO updateEvent(Long id, EventDTO eventDTO){
+        logger.info("Attempting to update event with ID: {}", id);
+        logger.debug("New event data - title: '{}', description: '{}', date: {}",
+                eventDTO.getTitle(), eventDTO.getDescription(), eventDTO.getEventDate());
+
+        if (id == null || id <= 0) {
+            logger.warn("Update validation failed: invalid event ID: {}", id);
+            throw new EventNotFoundException("Invalid event ID: " + id);
+        }
+
+        if (eventDTO.getTitle() == null || eventDTO.getTitle().trim().isEmpty()) {
+            logger.warn("Update validation failed: title is null or empty for event ID: {}", id);
+            throw new EventNotUpdatedException("Event title cannot be null or empty");
+        }
+
+        Event event = repository.findById(id)
+                .orElseThrow(() -> {
+                    logger.warn("Update failed: event not found with ID: {}", id);
+                    return new EventNotFoundException("Event with id " + id + " not found");
+                });
+
         try {
-            logger.info("Attempting to update event with ID: {}", id);
-            logger.debug("New event data - title: '{}', description: '{}', date: {}",
-                    eventDTO.getTitle(), eventDTO.getDescription(), eventDTO.getEventDate());
-
-            if (id == null || id <= 0) {
-                logger.warn("Update validation failed: invalid event ID: {}", id);
-                throw new EventNotFoundException("Invalid event ID: " + id);
-            }
-
-            if (eventDTO.getTitle() == null || eventDTO.getTitle().trim().isEmpty()) {
-                logger.warn("Update validation failed: title is null or empty for event ID: {}", id);
-                throw new EventNotUpdatedException("Event title cannot be null or empty");
-            }
-
-            Event event = repository.findById(id)
-                    .orElseThrow(() -> {
-                        logger.warn("Update failed: event not found with ID: {}", id);
-                        return new EventNotFoundException("Event with id " + id + " not found");
-                    });
-
             logger.debug("Found event to update - current title: '{}', description: '{}'",
                     event.getTitle(), event.getDescription());
 
@@ -136,15 +136,15 @@ public class EventService {
             Event updated = repository.save(event);
             logger.info("Event updated successfully with ID: {} - new title: '{}'", id, updated.getTitle());
             return mapper.eventToEventDTO(updated);
-        } catch (EventNotFoundException e) {
-            logger.error("EventNotFoundException occurred: {}", e.getMessage());
-            throw e;
-        } catch (EventNotUpdatedException e) {
-            logger.error("EventNotUpdatedException occurred: {}", e.getMessage());
-            throw e;
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Constraint violation while updating event with ID: {}", id, e);
+            throw new EventNotUpdatedException("Failed to update event: constraint violation", e);
+        } catch (DataAccessException e) {
+            logger.error("Database error while updating event with ID: {}", id, e);
+            throw new EventNotUpdatedException("Failed to update event due to DB error", e);
         } catch (Exception e) {
-            logger.error("Unexpected error occurred while updating event with ID: {}: {}", id, e.getMessage(), e);
-            throw new EventNotUpdatedException("Failed to update event: " + e.getMessage());
+            logger.error("Unexpected error occurred while updating event with ID: {}", id, e);
+            throw new EventNotUpdatedException("Failed to update event: " + e.getMessage(), e);
         }
     }
 
@@ -155,14 +155,14 @@ public class EventService {
      * @throws EventNotFoundException if the event with the given ID is not found
      */
     public EventDTO getEventById(Long id) {
+        logger.info("Retrieving event with ID: {}", id);
+
+        if (id == null || id <= 0) {
+            logger.warn("Retrieval validation failed: invalid event ID: {}", id);
+            throw new EventNotFoundException("Invalid event ID: " + id);
+        }
+
         try {
-            logger.info("Retrieving event with ID: {}", id);
-
-            if (id == null || id <= 0) {
-                logger.warn("Retrieval validation failed: invalid event ID: {}", id);
-                throw new EventNotFoundException("Invalid event ID: " + id);
-            }
-
             Optional<Event> event = repository.findById(id);
             if (event.isEmpty()) {
                 logger.warn("Retrieval failed: event not found with ID: {}", id);
@@ -173,23 +173,26 @@ public class EventService {
                     id, event.get().getTitle(), event.get().getDescription());
             return mapper.eventToEventDTO(event.get());
         } catch (EventNotFoundException e) {
-            logger.error("EventNotFoundException occurred: {}", e.getMessage());
+            logger.error("EventNotFoundException occurred while retrieving event with ID: {}: {}", id, e.getMessage());
             throw e;
+        } catch (DataAccessException e) {
+            logger.error("Database error while retrieving event with ID: {}", id, e);
+            throw new EventNotFoundException("Failed to retrieve event due to DB error", e);
         } catch (Exception e) {
-            logger.error("Unexpected error occurred while retrieving event with ID: {}: {}", id, e.getMessage(), e);
-            throw new EventNotFoundException("Failed to retrieve event: " + e.getMessage());
+            logger.error("Unexpected error occurred while retrieving event with ID: {}", id, e);
+            throw new EventNotFoundException("Failed to retrieve event: " + e.getMessage(), e);
         }
     }
 
     /**
      * Retrieves all events.
      * @return a list of all events as EventDTOs
-     * @throws RuntimeException if unable to retrieve events from the database
+     * @throws EventNotFoundException if unable to retrieve events from the database
      */
     public List<EventDTO> getAllEvents() {
-        try {
-            logger.info("Starting retrieval of all events");
+        logger.info("Starting retrieval of all events");
 
+        try {
             List<Event> events = repository.findAll();
             if (events.isEmpty()) {
                 logger.info("No events found in the database");
@@ -205,9 +208,12 @@ public class EventService {
             logger.info("Successfully retrieved and converted {} events", eventDTOs.size());
             logger.debug("Event IDs: {}", eventDTOs.stream().map(EventDTO::getId).collect(Collectors.toList()));
             return eventDTOs;
+        } catch (DataAccessException e) {
+            logger.error("Database error while retrieving all events", e);
+            throw new EventNotFoundException("Failed to retrieve all events due to DB error", e);
         } catch (Exception e) {
             logger.error("Failed to retrieve all events from database: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to retrieve all events: " + e.getMessage(), e);
+            throw new EventNotFoundException("Failed to retrieve all events: " + e.getMessage(), e);
         }
     }
 
