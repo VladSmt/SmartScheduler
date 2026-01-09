@@ -18,7 +18,7 @@ public class EventDTO {
 
     private Long id;
 
-    @NotNull(message = "userId cannot be null")
+    // Optional - filled by service from Telegram ID, not by handler
     private Long userId;
 
     @NotBlank(message = "Title cannot be blank")
@@ -28,7 +28,6 @@ public class EventDTO {
     @Size(max = 500, message = "Description must be at most 500 characters")
     private String description;
 
-
-    @NotNull(message = "Event date cannot be null")
+    // Optional - user can skip event date during manual creation
     private LocalDateTime eventDate;
 }

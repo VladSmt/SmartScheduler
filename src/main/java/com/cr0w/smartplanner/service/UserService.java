@@ -27,8 +27,8 @@ public class UserService {
 
         try {
             return userRepository.findByTelegramChatId(tgId)
-                    .orElseGet(() -> {
-                        User newUser = new User();
+                        .orElseGet(() -> {
+                            User newUser = new User();
                         newUser.setTelegramChatId(tgId);
                         User saved = userRepository.save(newUser);
 

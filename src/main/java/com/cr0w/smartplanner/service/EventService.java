@@ -7,6 +7,7 @@ import com.cr0w.smartplanner.exception.EventNotFoundException;
 import com.cr0w.smartplanner.exception.EventNotUpdatedException;
 import com.cr0w.smartplanner.mapper.EventMapper;
 import com.cr0w.smartplanner.model.Event;
+import com.cr0w.smartplanner.model.User;
 import com.cr0w.smartplanner.repository.EventRepository;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -30,13 +31,16 @@ public class EventService {
      * @return the created event as EventDTO
      * @throws EventNotCreatedException if the event could not be created
      */
-    public EventDTO createEvent(@Valid EventDTO eventDTO){
+    public EventDTO createEvent(@Valid EventDTO eventDTO, Long tgId) {
 
         logger.info("Starting event creation with title: '{}'", eventDTO.getTitle());
         logger.debug("Event details - description: '{}', date: {}", eventDTO.getDescription(), eventDTO.getEventDate());
 
+        User user = userService.getUserOrCreateNew(tgId);
+        logger.debug("User derived from tgId: {} -> userId: {}", tgId, user.getId());
+
         Event event = Event.builder()
-                .userId(eventDTO.getUserId())
+                .userId(user.getId())  // ✅ Use derived user's ID, not null from DTO
                 .title(eventDTO.getTitle())
                 .description(eventDTO.getDescription())
                 .eventDate(eventDTO.getEventDate())
@@ -44,7 +48,7 @@ public class EventService {
 
         try {
             Event saved = repository.save(event);
-            logger.info("Event created successfully with ID: {}", saved.getId());
+            logger.info("Event created successfully with ID: {} for user: {}", saved.getId(), user.getId());
             return mapper.eventToEventDTO(saved);
         } catch (DataIntegrityViolationException e) {
             logger.error("Failed to create event due to constraint violation", e);
@@ -53,8 +57,8 @@ public class EventService {
             logger.error("Unexpected DB error while creating event", e);
             throw new EventNotCreatedException("Failed to create event due to DB error",  e);
         } catch (Exception e) {
-            logger.error("Unexpected  error while creating event", e);
-            throw new EventNotCreatedException("Failed to delete event: " + e.getMessage(), e);
+            logger.error("Unexpected error while creating event", e);
+            throw new EventNotCreatedException("Failed to create event: " + e.getMessage(), e);
         }
     }
 
@@ -228,4 +232,7 @@ public class EventService {
      */
     @Autowired
     EventMapper mapper;
+
+    @Autowired
+    UserService userService;
 }

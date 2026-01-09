@@ -43,19 +43,6 @@ public class EventController {
     @Autowired
     EventService eventService;
 
-    @Autowired
-    TestService testService;
-
-    /**
-     * Simple test endpoint used during development.
-     *
-     * @return a test string produced by {@link TestService}
-     */
-    @GetMapping("/test")
-    public String test(){
-        return testService.getLongestCommonPrefix();
-    }
-
     /**
      * Create a new Event.
      *
@@ -63,9 +50,9 @@ public class EventController {
      * @return ResponseEntity containing created {@link EventDTO} and HTTP 201 status
      * @throws com.cr0w.smartplanner.exception.EventNotCreatedException when creation fails
      */
-    @PostMapping("/events")
-    public ResponseEntity<EventDTO> createEvent(@Valid @RequestBody EventDTO eventDTO) {
-        EventDTO created = eventService.createEvent(eventDTO);
+    @PostMapping("/events/{tgId}")
+    public ResponseEntity<EventDTO> createEvent(@Valid @RequestBody EventDTO eventDTO, @PathVariable Long tgId) {
+        EventDTO created = eventService.createEvent(eventDTO, tgId);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
