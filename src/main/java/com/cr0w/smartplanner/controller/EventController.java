@@ -80,6 +80,18 @@ public class EventController {
     }
 
     /**
+     * Retrieve all Events for a specific user by their ID.
+     *
+     * @param userId the ID of the user
+     * @return ResponseEntity containing a list of {@link EventDTO} objects for the specified user
+     * @throws com.cr0w.smartplanner.exception.EventNotFoundException when the user has no events or retrieval fails
+     */
+    @GetMapping("/events/user/{userId}")
+    public ResponseEntity<List<EventDTO>> getEventsByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(eventService.getEventsByUserId(userId));
+    }
+
+    /**
      * Update an existing Event.
      *
      * @param id the id of the event to update

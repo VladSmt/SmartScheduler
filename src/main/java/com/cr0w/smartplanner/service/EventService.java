@@ -222,6 +222,45 @@ public class EventService {
     }
 
     /**
+     * Retrieves all events for a specific user by their ID.
+     * @param userId the ID of the user
+     * @return a list of events as EventDTOs for the specified user
+     * @throws EventNotFoundException if the user has no events or unable to retrieve events from the database
+     */
+    public List<EventDTO> getEventsByUserId(Long userId) {
+        logger.info("Starting retrieval of all events for user with ID: {}", userId);
+
+        if (userId == null || userId <= 0) {
+            logger.warn("Retrieval validation failed: invalid user ID: {}", userId);
+            throw new EventNotFoundException("Invalid user ID: " + userId);
+        }
+
+        try {
+            List<Event> events = repository.findByUserId(userId);
+            if (events.isEmpty()) {
+                logger.info("No events found for user with ID: {}", userId);
+                return List.of();
+            }
+
+            logger.debug("Found {} events for user with ID: {}, converting to DTOs", events.size(), userId);
+
+            List<EventDTO> eventDTOs = events.stream()
+                    .map(mapper::eventToEventDTO)
+                    .collect(Collectors.toList());
+
+            logger.info("Successfully retrieved and converted {} events for user with ID: {}", eventDTOs.size(), userId);
+            logger.debug("Event IDs for user {}: {}", userId, eventDTOs.stream().map(EventDTO::getId).collect(Collectors.toList()));
+            return eventDTOs;
+        } catch (DataAccessException e) {
+            logger.error("Database error while retrieving events for user with ID: {}", userId, e);
+            throw new EventNotFoundException("Failed to retrieve events for user due to DB error", e);
+        } catch (Exception e) {
+            logger.error("Unexpected error occurred while retrieving events for user with ID: {}", userId, e);
+            throw new EventNotFoundException("Failed to retrieve events for user: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Event repository for database operations.
      */
     @Autowired
