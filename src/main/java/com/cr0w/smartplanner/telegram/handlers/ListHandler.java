@@ -39,8 +39,7 @@ public class ListHandler implements BotCommandHandler {
         logger.info("ListHandler handling list request from chat: {}", chatId);
 
         try {
-            Long userId = userService.getUserOrCreateNew(chatId).getId();
-            List<EventDTO> events = eventService.getEventsByTgId(userId);
+            List<EventDTO> events = eventService.getEventsByTgId(chatId);
 
             if (events.isEmpty()) {
                 sendNoEventsMessage(client, chatId);
