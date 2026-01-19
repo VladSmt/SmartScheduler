@@ -1,22 +1,23 @@
 package com.cr0w.smartplanner.service;
 
 import com.cr0w.smartplanner.exception.UserNotCreatedException;
+import com.cr0w.smartplanner.exception.UserNotFoundException;
 import com.cr0w.smartplanner.model.User;
 import com.cr0w.smartplanner.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
-    public final UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
+    @Transactional
     public User getUserOrCreateNew(Long tgId) {
         logger.info("Getting user or creating new user with tgId: {}", tgId);
 
@@ -45,5 +46,13 @@ public class UserService {
             logger.error("Unexpected error while creating user with tgId {}: {}", tgId, e.getMessage(), e);
             throw new UserNotCreatedException("Unexpected error while creating user", e);
         }
+    }
+
+    public User getUserByTgId(Long tgId) {
+        return userRepository.findByTelegramChatId(tgId)
+                .orElseThrow(() -> {
+                    logger.warn("User with tgId {} not found for operation", tgId);
+                    return new UserNotFoundException("User not found");
+                });
     }
 }

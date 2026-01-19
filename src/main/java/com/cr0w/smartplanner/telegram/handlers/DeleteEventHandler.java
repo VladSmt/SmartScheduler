@@ -41,8 +41,8 @@ public class DeleteEventHandler implements BotCommandHandler {
             String idString = callbackData.substring("delete_".length());
             Long eventId = Long.parseLong(idString);
 
-            // 2. Видаляємо через сервіс
-            EventDTO deletedEvent = eventService.deleteEvent(eventId);
+            // 2. Видаляємо через сервіс (pass tgId/chatId to validate ownership)
+            EventDTO deletedEvent = eventService.deleteEvent(eventId, chatId);
 
             String responseText;
             if (deletedEvent != null) {

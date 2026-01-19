@@ -1,7 +1,6 @@
 package com.cr0w.smartplanner.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,9 +16,6 @@ import java.time.LocalDateTime;
 public class EventDTO {
 
     private Long id;
-
-    // Optional - filled by service from Telegram ID, not by handler
-    private Long userId;
 
     @NotBlank(message = "Title cannot be blank")
     @Size(max = 100, message = "Title must be at most 100 characters")

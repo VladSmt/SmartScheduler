@@ -2,7 +2,6 @@ package com.cr0w.smartplanner.controller;
 
 import com.cr0w.smartplanner.dto.EventDTO;
 import com.cr0w.smartplanner.service.EventService;
-import com.cr0w.smartplanner.service.TestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,11 +23,11 @@ import java.util.List;
  *
  * <p>Endpoints:
  * <ul>
- *   <li>POST /events - create new event (returns 201 Created)</li>
+ *   <li>POST /events/{tgId} - create new event (returns 201 Created)</li>
  *   <li>GET /events - get all events (returns 200 OK)</li>
  *   <li>GET /events/{id} - get event by id (returns 200 OK)</li>
- *   <li>PUT /events/{id} - update event by id (returns 200 OK)</li>
- *   <li>DELETE /events/{id} - delete event by id (returns 200 OK)</li>
+ *   <li>PUT /events/{id}/{tgId} - update event by id for user (returns 200 OK)</li>
+ *   <li>DELETE /events/{id}/{tgId} - delete event by id for user (returns 200 OK)</li>
  * </ul>
  * </p>
  */
@@ -63,10 +62,11 @@ public class EventController {
      * @return ResponseEntity containing the found {@link EventDTO}
      * @throws com.cr0w.smartplanner.exception.EventNotFoundException when the event is not found
      */
-    @GetMapping("/events/{id}")
-    public ResponseEntity<EventDTO> getEventById(@PathVariable Long id) {
-        return ResponseEntity.ok(eventService.getEventById(id));
+    @GetMapping("/events/{id}/{tgId}")
+    public ResponseEntity<EventDTO> getEventById(@PathVariable Long id, @PathVariable Long tgId) {
+        return ResponseEntity.ok(eventService.getEventById(id, tgId));
     }
+
 
     /**
      * Retrieve all Events.
@@ -74,9 +74,9 @@ public class EventController {
      * @return ResponseEntity containing a list of all {@link EventDTO} objects
      * @throws RuntimeException when retrieval fails
      */
-    @GetMapping("/events")
-    public ResponseEntity<List<EventDTO>> getAllEvents() {
-        return ResponseEntity.ok(eventService.getAllEvents());
+    @GetMapping("/events/{tgId}")
+    public ResponseEntity<List<EventDTO>> getAllEvents(@PathVariable Long tgId) {
+        return ResponseEntity.ok(eventService.getEventsByTgId(tgId));
     }
 
     /**
@@ -88,31 +88,33 @@ public class EventController {
      */
     @GetMapping("/events/user/{userId}")
     public ResponseEntity<List<EventDTO>> getEventsByUserId(@PathVariable Long userId) {
-        return ResponseEntity.ok(eventService.getEventsByUserId(userId));
+        return ResponseEntity.ok(eventService.getEventsByTgId(userId));
     }
 
     /**
-     * Update an existing Event.
+     * Update an existing Event for a user identified by tgId.
      *
      * @param id the id of the event to update
      * @param eventDTO validated payload with updated fields
+     * @param tgId telegram id of the user requesting the update
      * @return ResponseEntity containing the updated {@link EventDTO}
      * @throws com.cr0w.smartplanner.exception.EventNotFoundException when the event is not found
      */
-    @PutMapping("/events/{id}")
-    public ResponseEntity<EventDTO> updateEvent(@PathVariable Long id, @Valid @RequestBody EventDTO eventDTO) {
-        return ResponseEntity.ok(eventService.updateEvent(id, eventDTO));
+    @PutMapping("/events/{id}/{tgId}")
+    public ResponseEntity<EventDTO> updateEvent(@PathVariable Long id, @Valid @RequestBody EventDTO eventDTO, @PathVariable Long tgId) {
+        return ResponseEntity.ok(eventService.updateEvent(id, eventDTO, tgId));
     }
 
     /**
-     * Delete an Event by its id.
+     * Delete an Event by its id for a user identified by tgId.
      *
      * @param id the id of the event to delete
+     * @param tgId telegram id of the user requesting deletion
      * @return ResponseEntity containing the deleted {@link EventDTO}
      * @throws com.cr0w.smartplanner.exception.EventNotFoundException when the event is not found
      */
-    @DeleteMapping("/events/{id}")
-    public ResponseEntity<EventDTO> deleteEvent(@PathVariable Long id) {
-        return ResponseEntity.ok(eventService.deleteEvent(id));
+    @DeleteMapping("/events/{id}/{tgId}")
+    public ResponseEntity<EventDTO> deleteEvent(@PathVariable Long id, @PathVariable Long tgId) {
+        return ResponseEntity.ok(eventService.deleteEvent(id, tgId));
     }
 }
