@@ -165,8 +165,6 @@ public class EventService {
         } catch (DataAccessException e) {
             logger.error("getEventById DB Error: {}", e.getMessage());
             throw new EventNotFoundException("Database is down or busy", e);
-        } catch (EventNotFoundException enf) {
-            throw enf;
         } catch (Exception e) {
             logger.error("Unexpected error while retrieving event {}: {}", id, e.getMessage(), e);
             throw new EventNotFoundException("Failed to retrieve event with id " + id, e);
