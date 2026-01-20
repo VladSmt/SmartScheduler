@@ -1,5 +1,16 @@
 package com.cr0w.smartplanner.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+
+import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
+
 import com.cr0w.smartplanner.dto.EventDTO;
 import com.cr0w.smartplanner.exception.EventNotCreatedException;
 import com.cr0w.smartplanner.exception.EventNotDeletedException;
@@ -9,25 +20,15 @@ import com.cr0w.smartplanner.mapper.EventMapper;
 import com.cr0w.smartplanner.model.Event;
 import com.cr0w.smartplanner.model.User;
 import com.cr0w.smartplanner.repository.EventRepository;
-import org.springframework.dao.DataAccessException;
-import org.springframework.transaction.annotation.Transactional;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.validation.annotation.Validated;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Validated
 @RequiredArgsConstructor
 @Service
 public class EventService {
     private static final Logger logger = LoggerFactory.getLogger(EventService.class);
-
 
 
     private final EventRepository repository;
@@ -38,6 +39,7 @@ public class EventService {
 
     /**
      * Creates a new event based on the provided EventDTO.
+     *
      * @param eventDTO the event data transfer object containing event details
      * @return the created event as EventDTO
      * @throws EventNotCreatedException if the event could not be created
@@ -53,27 +55,27 @@ public class EventService {
 
         Event event = mapper.eventDTOToEvent(eventDTO, user.getId());
 
-            try{
-                Event saved = repository.save(event);
-                logger.info("Event created successfully with ID: {} for user: {}", saved.getId(), user.getId());
-                return mapper.eventToEventDTO(saved);
-            } catch (DataAccessException e) {
-                logger.error("createEvent DB Error: {}", e.getMessage());
-                throw new EventNotCreatedException("Database is down or busy", e);
-            } catch (Exception e) {
-                logger.error("Unexpected error while creating event for user {}: {}", user.getId(), e.getMessage(), e);
-                throw new EventNotCreatedException("Failed to create event", e);
-            }
-
+        try {
+            Event saved = repository.save(event);
+            logger.info("Event created successfully with ID: {} for user: {}", saved.getId(), user.getId());
+            return mapper.eventToEventDTO(saved);
+        } catch (DataAccessException e) {
+            logger.error("createEvent DB Error: {}", e.getMessage());
+            throw new EventNotCreatedException("Database is down or busy", e);
+        } catch (Exception e) {
+            logger.error("Unexpected error while creating event for user {}: {}", user.getId(), e.getMessage(), e);
+            throw new EventNotCreatedException("Failed to create event", e);
+        }
 
 
     }
 
     /**
      * Deletes an event by its ID.
+     *
      * @param id the ID of the event to delete
      * @return the deleted event as EventDTO
-     * @throws EventNotFoundException if the event with the given ID is not found
+     * @throws EventNotFoundException   if the event with the given ID is not found
      * @throws EventNotDeletedException if the event could not be deleted
      */
     @Transactional
@@ -104,15 +106,16 @@ public class EventService {
     /**
      * Updates an existing event by its ID with new details from EventDTO.
      * Now validates that the event belongs to the user identified by tgId (same pattern as deleteEvent).
-     * @param id the ID of the event to update
+     *
+     * @param id       the ID of the event to update
      * @param eventDTO the event data transfer object containing updated details
-     * @param tgId telegram id of the user performing update
+     * @param tgId     telegram id of the user performing update
      * @return the updated event as EventDTO
-     * @throws EventNotFoundException if the event with the given ID is not found or does not belong to the user
+     * @throws EventNotFoundException   if the event with the given ID is not found or does not belong to the user
      * @throws EventNotUpdatedException if the event could not be updated
      */
     @Transactional
-    public EventDTO updateEvent(@Min(1) Long id, @Valid EventDTO eventDTO, Long tgId){
+    public EventDTO updateEvent(@Min(1) Long id, @Valid EventDTO eventDTO, Long tgId) {
         logger.info("Attempting to update event with ID: {} by tgId: {}", id, tgId);
         logger.debug("New event data - title: '{}', description: '{}', date: {}",
                 eventDTO.getTitle(), eventDTO.getDescription(), eventDTO.getEventDate());
@@ -142,6 +145,7 @@ public class EventService {
 
     /**
      * Retrieves an event by its ID.
+     *
      * @param id the ID of the event to retrieve
      * @return the event as EventDTO
      * @throws EventNotFoundException if the event with the given ID is not found
@@ -172,9 +176,9 @@ public class EventService {
     }
 
 
-
     /**
      * Retrieves all events for a specific user by their ID.
+     *
      * @param tgId the ID of the user
      * @return a list of events as EventDTOs for the specified user
      * @throws EventNotFoundException if the user has no events or unable to retrieve events from the database
