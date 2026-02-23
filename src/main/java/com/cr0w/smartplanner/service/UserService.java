@@ -1,5 +1,9 @@
 package com.cr0w.smartplanner.service;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.cr0w.smartplanner.exception.UserNotCreatedException;
 import com.cr0w.smartplanner.exception.UserNotFoundException;
 import com.cr0w.smartplanner.model.User;
@@ -7,9 +11,6 @@ import com.cr0w.smartplanner.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,8 +29,8 @@ public class UserService {
 
         try {
             return userRepository.findByTelegramChatId(tgId)
-                        .orElseGet(() -> {
-                            User newUser = new User();
+                    .orElseGet(() -> {
+                        User newUser = new User();
                         newUser.setTelegramChatId(tgId);
                         User saved = userRepository.save(newUser);
 

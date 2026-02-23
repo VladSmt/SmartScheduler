@@ -1,41 +1,42 @@
 package com.cr0w.smartplanner.telegram.handlers;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import com.cr0w.smartplanner.dto.CreateEventDTO;
+import com.cr0w.smartplanner.service.AIService;
+import com.cr0w.smartplanner.service.EventService;
+import com.cr0w.smartplanner.telegram.enums.ChatState;
+import com.cr0w.smartplanner.telegram.service.ChatStateService;
+import com.cr0w.smartplanner.telegram.service.TelegramService;
+import com.cr0w.smartplanner.telegram.view.EventView;
+import com.cr0w.smartplanner.telegram.view.KeyboardFactory;
+import lombok.RequiredArgsConstructor;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
+
+@RequiredArgsConstructor
 @Component
-public class AIParserHandler implements BotCommandHandler {
-    private static final Logger logger = LoggerFactory.getLogger(AIParserHandler.class);
+public class AIParserHandler implements CommandHandler {
 
-    private static final String AI_HANDLER_COMMAND = "AI-помічник";
+    private final AIService aiService;
+    private final TelegramService telegramService;
+    private final EventService eventService;
+    private final ChatStateService chatStateService;
+    private final EventView eventView;
+    private final KeyboardFactory keyboardFactory;
 
     @Override
-    public boolean canHandle(Update update) {
-        boolean canHandle = update.hasMessage() &&
-                AI_HANDLER_COMMAND.equalsIgnoreCase(update.getMessage().getText().trim());
-        logger.debug("AIParserHandler.canHandle() - result: {}", canHandle);
-        return canHandle;
+    public String getCommand() {
+        return ChatState.AWAITING.name();
     }
 
     @Override
-    public void handle(Update update, TelegramClient client) {
-        long chatId = update.getMessage().getChatId();
-        logger.info("AIParserHandler handling message from chat: {}", chatId);
+    public void handle(Message message) {
+        System.out.println("AIParserHandler handling message: " + message.getText());
 
-        SendMessage message = SendMessage.builder()
-                .chatId(chatId)
-                .text("Включений AI‑режим. Напиши текст події …")
-                .build();
-        try {
-            client.execute(message);
-            logger.debug("AI mode message sent successfully to chat: {}", chatId);
-        } catch (TelegramApiException e) {
-            logger.error("Failed to send AI mode message to chat: {}", chatId, e);
-        }
+        CreateEventDTO res = aiService.parseEventFromText(message.getText());
+        chatStateService.setTemporaryData(message.getChatId(), res);
+        chatStateService.clearState(message.getChatId());
+
+        telegramService.sendMessage(message.getChatId(), eventView.formatConfirmation(res), keyboardFactory.createConfirmationKeyboard(message.getChatId()));
     }
 }

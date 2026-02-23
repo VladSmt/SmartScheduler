@@ -1,14 +1,22 @@
 package com.cr0w.smartplanner.controller;
 
-import com.cr0w.smartplanner.dto.EventDTO;
-import com.cr0w.smartplanner.service.EventService;
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.Valid;
-import java.util.List;
+import com.cr0w.smartplanner.dto.CreateEventDTO;
+import com.cr0w.smartplanner.dto.EventDTO;
+import com.cr0w.smartplanner.service.EventService;
 
 /**
  * REST controller for Event-related operations.
@@ -50,7 +58,7 @@ public class EventController {
      * @throws com.cr0w.smartplanner.exception.EventNotCreatedException when creation fails
      */
     @PostMapping("/events/{tgId}")
-    public ResponseEntity<EventDTO> createEvent(@Valid @RequestBody EventDTO eventDTO, @PathVariable Long tgId) {
+    public ResponseEntity<EventDTO> createEvent(@Valid @RequestBody CreateEventDTO eventDTO, @PathVariable Long tgId) {
         EventDTO created = eventService.createEvent(eventDTO, tgId);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -69,34 +77,25 @@ public class EventController {
 
 
     /**
-     * Retrieve all Events.
-     *
-     * @return ResponseEntity containing a list of all {@link EventDTO} objects
-     * @throws RuntimeException when retrieval fails
+     * Get paginated Events for a specific user by their tgId.
      */
     @GetMapping("/events/{tgId}")
-    public ResponseEntity<List<EventDTO>> getAllEvents(@PathVariable Long tgId) {
-        return ResponseEntity.ok(eventService.getEventsByTgId(tgId));
+    public ResponseEntity<Page<EventDTO>> getEventsByUserId(
+            @PathVariable Long tgId, @PathVariable int page) {
+
+
+        Page<EventDTO> events = eventService.getEventsByTgId(tgId, page);
+
+        return ResponseEntity.ok(events);
     }
 
-    /**
-     * Retrieve all Events for a specific user by their ID.
-     *
-     * @param userId the ID of the user
-     * @return ResponseEntity containing a list of {@link EventDTO} objects for the specified user
-     * @throws com.cr0w.smartplanner.exception.EventNotFoundException when the user has no events or retrieval fails
-     */
-    @GetMapping("/events/user/{userId}")
-    public ResponseEntity<List<EventDTO>> getEventsByUserId(@PathVariable Long userId) {
-        return ResponseEntity.ok(eventService.getEventsByTgId(userId));
-    }
 
     /**
      * Update an existing Event for a user identified by tgId.
      *
-     * @param id the id of the event to update
+     * @param id       the id of the event to update
      * @param eventDTO validated payload with updated fields
-     * @param tgId telegram id of the user requesting the update
+     * @param tgId     telegram id of the user requesting the update
      * @return ResponseEntity containing the updated {@link EventDTO}
      * @throws com.cr0w.smartplanner.exception.EventNotFoundException when the event is not found
      */
@@ -108,7 +107,7 @@ public class EventController {
     /**
      * Delete an Event by its id for a user identified by tgId.
      *
-     * @param id the id of the event to delete
+     * @param id   the id of the event to delete
      * @param tgId telegram id of the user requesting deletion
      * @return ResponseEntity containing the deleted {@link EventDTO}
      * @throws com.cr0w.smartplanner.exception.EventNotFoundException when the event is not found
